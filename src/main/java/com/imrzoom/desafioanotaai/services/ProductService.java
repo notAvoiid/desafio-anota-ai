@@ -35,15 +35,14 @@ public class ProductService {
     }
 
     public Product create(ProductDTO productDTO) {
-        Category category = this.categoryService.findById(productDTO.categoryId()).orElseThrow(
+        this.categoryService.findById(productDTO.categoryId()).orElseThrow(
                 () -> new CategoryNotFoundException(String.format("%s not found!", productDTO.categoryId()))
         );
 
         Product newProduct = new Product(productDTO);
-        newProduct.setCategory(category);
 
         this.productRepository.save(newProduct);
-        this.awsSnsService.publish(new MessageDTO(newProduct.getOwnerId()));
+        this.awsSnsService.publish(new MessageDTO(newProduct.toString()));
 
         return newProduct;
     }
@@ -52,14 +51,16 @@ public class ProductService {
         Product product = this.productRepository.findById(id).orElseThrow(ProductNotFoundException::new);
 
         if (productDTO.categoryId() != null) {
-            this.categoryService.findById(productDTO.categoryId()).ifPresent(product::setCategory);
+            this.categoryService.findById(productDTO.categoryId()).orElseThrow(CategoryNotFoundException::new);
+            product.setCategory(productDTO.categoryId());
         }
+
         if (!productDTO.title().isEmpty()) product.setTitle(productDTO.title());
         if (!productDTO.description().isEmpty()) product.setDescription(productDTO.description());
         if (!(productDTO.price() == null)) product.setPrice(productDTO.price());
 
         this.productRepository.save(product);
-        this.awsSnsService.publish(new MessageDTO(product.getOwnerId()));
+        this.awsSnsService.publish(new MessageDTO(product.toString()));
 
         return product;
     }
